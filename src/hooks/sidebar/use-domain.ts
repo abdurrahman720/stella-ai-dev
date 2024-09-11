@@ -34,17 +34,23 @@ export const useDomain = () => {
   }, [pathname]);
 
   const onAddDomain = handleSubmit(async (values: FieldValues) => {
-    setLoading(true);
-    const uploaded = await upload.uploadFile(values.image[0]);
-    const domain = await onIntegrateDomain(values.domain, uploaded.uuid);
-    if (domain) {
-      reset();
+    try {
+      setLoading(true);
+      const uploaded = await upload.uploadFile(values.image[0]);
+      const domain = await onIntegrateDomain(values.domain, uploaded.uuid);
+      if (domain) {
+        reset();
+        setLoading(false);
+        toast({
+          title: domain.status == 200 ? "Success" : "Error",
+          description: domain.message,
+        });
+        router.refresh();
+      }
+    } catch (error) {
       setLoading(false);
-      toast({
-        title: domain.status == 200 ? "Success" : "Error",
-        description: domain.message,
-      });
-      router.refresh();
+      console.log("error uploading", error);
+      console.error(error);
     }
   });
 

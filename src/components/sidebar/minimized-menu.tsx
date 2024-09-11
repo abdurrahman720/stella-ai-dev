@@ -37,7 +37,7 @@ export const MinMenu = ({
           {SIDE_BAR_MENU.map((menu, key) => (
             <MenuItem size="min" {...menu} key={key} current={current} />
           ))}
-          {/* <DomainMenu min domains={domains} /> */}
+          <DomainMenu min domains={domains} />
         </div>
         <div className="flex flex-col">
           <MenuItem
