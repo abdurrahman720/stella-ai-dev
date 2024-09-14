@@ -136,6 +136,9 @@ export const onViewUnReadMessages = async (id: string) => {
   }
 };
 
+
+//TODO setup pusherr
+
 // export const onRealTimeChat = async (
 //   chatroomId: string,
 //   message: string,
