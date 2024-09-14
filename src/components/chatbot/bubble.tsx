@@ -1,5 +1,10 @@
 import React from "react";
-import { cn, extractUUIDFromString, getMonthName } from "@/lib/utils";
+import {
+  cn,
+  extractURLfromString,
+  extractUUIDFromString,
+  getMonthName,
+} from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { User } from "lucide-react";
 import Image from "next/image";
@@ -18,6 +23,11 @@ const Bubble = ({ message, createdAt }: Props) => {
   let d = new Date();
   const image = extractUUIDFromString(message.content);
   console.log(message.link);
+
+  const link = extractURLfromString(message.content);
+  const messageLink = link ? link[0] : null;
+
+  console.log(messageLink);
 
   return (
     <div
@@ -69,11 +79,13 @@ const Bubble = ({ message, createdAt }: Props) => {
           </div>
         ) : (
           <p className="text-sm">
-            {message.content.replace("(complete)", " ")}
-            {message.link && (
+            {message.content
+              .replace("(complete)", " ")
+              .replace(messageLink as string, "")}
+            {messageLink && (
               <Link
                 className="underline font-bold pl-2"
-                href={message.link}
+                href={messageLink}
                 target="_blank"
               >
                 Your Link

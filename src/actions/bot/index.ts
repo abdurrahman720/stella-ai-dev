@@ -153,7 +153,7 @@ export const onAiChatBotAssistant = async (
               role: "assistant",
               content: `Welcome aboard ${
                 customerEmail.split("@")[0]
-              }! I'm glad to connect with you. Is there anything you need help with?`,
+              }! I'm glad to connect with you. Now tell me, How can I help?`,
             };
             return { response };
           }
@@ -207,37 +207,44 @@ export const onAiChatBotAssistant = async (
           message,
           author
         );
+        console.log("existing customer");
+        console.log([
+          chatBotDomain.filterQuestions
+            .map((questions) => questions.question)
+            .join(", "),
+        ]);
+
+        console.log(checkCustomer?.customer[0].id);
 
         const chatCompletion = await groq.chat.completions.create({
           messages: [
             {
               role: "assistant",
               content: `
-              You will get an array of questions that you must ask the customer. 
-              
-              Progress the conversation using those questions. 
-              
-              Whenever you ask a question from the array i need you to add a keyword at the end of the question (complete) this keyword is extremely important. 
-              
-              Do not forget it.
+             You will receive an array of questions that you must ask the customer in a specific order.
 
-              only add this keyword when your asking a question from the array of questions. No other question satisfies this condition
+Progress the conversation step by step using these questions. **Wait for the customer's response** before moving on to the next question.
 
-              Always maintain character and stay respectfull.
+For each question from the array, add the keyword (complete) at the end. This keyword is crucial for tracking, and **only** questions from the array should have this keyword.
 
-              The array of questions : [${chatBotDomain.filterQuestions
+**Do not continue the conversation until all questions have been asked and answered.** Stay respectful and maintain character throughout the conversation.
+
+The array of questions: [${chatBotDomain.filterQuestions
                 .map((questions) => questions.question)
                 .join(", ")}]
 
-              if the customer says something out of context or inapporpriate. Simply say this is beyond you and you will get a real user to continue the conversation. And add a keyword (realtime) at the end.
+Once all questions are answered, **transition** the conversation smoothly by asking if they are interested in booking an appointment. Do not offer the link right away.
 
-              if the customer agrees to book an appointment send them this link http://localhost:3000/portal/${id}/appointment/${
+If the customer agrees to book an appointment, lead them to this link: http://localhost:3000/portal/${id}/appointment/${
                 checkCustomer?.customer[0].id
-              }
+              } and tell them that this link is for the appointment.
 
-              if the customer wants to buy a product redirect them to the payment page http://localhost:3000/portal/${id}/payment/${
+If the customer makes an inappropriate or off-topic remark, politely tell them that it is beyond the chatbot's scope and that a real user will take over. Add the keyword (realtime) at the end of that message.
+
+If the customer wishes to buy a product, redirect them to the payment page: http://localhost:3000/portal/${id}/payment/${
                 checkCustomer?.customer[0].id
-              }
+              }.
+
           `,
             },
             ...chat,
@@ -248,6 +255,8 @@ export const onAiChatBotAssistant = async (
           ],
           model: "llama3-8b-8192",
         });
+
+        console.log(chatCompletion.choices[0].message);
 
         if (chatCompletion.choices[0].message.content?.includes("(realtime)")) {
           const realtime = await client.chatRoom.update({
@@ -308,17 +317,20 @@ export const onAiChatBotAssistant = async (
             chatCompletion.choices[0].message.content as string
           );
 
+          console.log(generatedLink);
+
           if (generatedLink) {
             const link = generatedLink[0];
+
             const response = {
               role: "assistant",
-              content: `Great! you can follow the link to proceed`,
-              link: link.slice(0, -1),
+              content: `I'd be happy to help you book an appointment. Before we do that, I just need to provide you with a link to our appointment booking page. This link is specific to your customer profile, and it will allow you to schedule an appointment at a time that suits you best. ${link}`,
+              // link: link,
             };
 
             await onStoreConversations(
               checkCustomer?.customer[0].chatRoom[0].id!,
-              `${response.content} ${response.link}`,
+              `${response.content} `,
               "assistant"
             );
 
@@ -345,11 +357,15 @@ export const onAiChatBotAssistant = async (
           {
             role: "assistant",
             content: `
-      You are a highly knowledgeable and experienced sales representative for Leavoda, an all-in-one Field Service Management software. Leavoda helps businesses schedule jobs, dispatch teams, invoice clients, track performance, and get paid — all in one place. Your goal is to have a natural, human-like conversation with the customer in order to understand their needs, provide relevant information, and guide them towards using Leavoda for their service management needs.
+      You are a highly knowledgeable and experienced sales representative for Leavoda, an all-in-one Field Service Management software. Leavoda helps businesses schedule jobs, dispatch teams, invoice clients, track performance, and get paid — all in one place. 
 
-      Start by warmly welcoming the customer on behalf of Leavoda, making them feel comfortable. Let them know how Leavoda can help streamline their operations and make their workflow more efficient. 
+      Start by warmly welcoming the customer on behalf of Leavoda, making them feel comfortable and must ask for their email so that the progress can be saved It is most important. Remember the email is not for follow up!
+      
+      Do not continue conversations until you ask and get the email. Remember it.
+    
+      
 
-      Your next task is to lead the conversation naturally, prompting them to share their email address so that you can provide more tailored information or a demo of Leavoda. Be respectful and maintain a professional tone while never breaking character.
+      Be respectful and maintain a professional tone while never breaking character and do not forget to ask email.
       `,
           },
           ...chat,
