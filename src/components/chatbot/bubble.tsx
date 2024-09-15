@@ -21,6 +21,7 @@ type Props = {
 
 const Bubble = ({ message, createdAt }: Props) => {
   let d = new Date();
+  console.log(message);
   const image = extractUUIDFromString(message.content);
   console.log(message.link);
 

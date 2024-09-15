@@ -2,14 +2,20 @@
 
 import { client } from "@/lib/prisma";
 import { extractEmailsFromString, extractURLfromString } from "@/lib/utils";
-// import { onRealTimeChat } from "../conversation";
+
 import { clerkClient } from "@clerk/nextjs";
 import { onMailer } from "../mailer";
-import OpenAi from "openai";
+
 import Groq from "groq-sdk";
+import { onRealTimeChat } from "../conversation";
 
 // const openai = new OpenAi({
 //   apiKey: process.env.OPEN_AI_KEY,
+// });
+
+// const groq = new OpenAI({
+//   apiKey: process.env.AIML_API_KEY,
+//   baseURL: "https://api.aimlapi.com/v1",
 // });
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -149,13 +155,41 @@ export const onAiChatBotAssistant = async (
           });
           if (newCustomer) {
             console.log("new customer made");
-            const response = {
-              role: "assistant",
-              content: `Welcome aboard ${
-                customerEmail.split("@")[0]
-              }! I'm glad to connect with you. Now tell me, How can I help?`,
-            };
-            return { response };
+
+            const chatCompletion = await groq.chat.completions.create({
+              messages: [
+                {
+                  role: "assistant",
+                  content: `
+     Welcome aboard ${customerEmail.split("@")[0]}!
+Just say, thanks for your email and go ahead. Nothig else.
+      `,
+                },
+                ...chat,
+                {
+                  role: "user",
+                  content: message,
+                },
+              ],
+              model: "llama3-70b-8192",
+            });
+
+            console.log(chatCompletion.choices[0].message);
+            if (chatCompletion) {
+              const response = {
+                role: "assistant",
+                content: chatCompletion.choices[0].message.content,
+              };
+
+              return { response };
+            }
+            // const response = {
+            //   role: "assistant",
+            //   content: `Welcome aboard ${
+            //     customerEmail.split("@")[0]
+            //   }! I'm glad to connect with you. Now tell me, How can I help?`,
+            // };
+            // return { response };
           }
         }
         if (checkCustomer && checkCustomer.customer[0].chatRoom[0].live) {
@@ -165,12 +199,12 @@ export const onAiChatBotAssistant = async (
             author
           );
 
-          // onRealTimeChat(
-          //   checkCustomer.customer[0].chatRoom[0].id,
-          //   message,
-          //   "user",
-          //   author
-          // );
+          onRealTimeChat(
+            checkCustomer.customer[0].chatRoom[0].id,
+            message,
+            "user",
+            author
+          );
 
           if (!checkCustomer.customer[0].chatRoom[0].mailed) {
             const user = await clerkClient.users.getUser(
@@ -210,41 +244,54 @@ export const onAiChatBotAssistant = async (
         console.log("existing customer");
         console.log([
           chatBotDomain.filterQuestions
-            .map((questions) => questions.question)
+            .map((questions) => `${questions.question}`)
             .join(", "),
         ]);
 
-        console.log(checkCustomer?.customer[0].id);
+        // const questionKeywords = chatBotDomain.filterQuestions.map(
+        //   (questions) => {
+        //     return {
+        //       originalQuestion: questions.question,
+        //       keywords: questions.question
+        //         .toLowerCase()
+        //         .split(" ") // Split question into individual words
+        //         .filter((word) => word.length > 3), // Keep only meaningful words (e.g. length > 3)
+        //     };
+        //   }
+        // );
+
+        // console.log(questionKeywords);
+
+        console.log(checkCustomer?.customer[0].email);
 
         const chatCompletion = await groq.chat.completions.create({
           messages: [
             {
               role: "assistant",
               content: `
-             You will receive an array of questions that you must ask the customer in a specific order.
+             You will get an array of questions that you must ask the customer. 
+              
+              Progress the conversation using those questions. 
+              
+              Whenever you ask a question from the array i need you to add a keyword at the end of the question '(complete)' this keyword is extremely important. 
+              
+              Do not forget it.
 
-Progress the conversation step by step using these questions. **Wait for the customer's response** before moving on to the next question.
+              only add this keyword when your asking a question from the array of questions. No other question satisfies this condition
 
-For each question from the array, add the keyword (complete) at the end. This keyword is crucial for tracking, and **only** questions from the array should have this keyword.
+              Always maintain character and stay respectfull.
 
-**Do not continue the conversation until all questions have been asked and answered.** Stay respectful and maintain character throughout the conversation.
-
-The array of questions: [${chatBotDomain.filterQuestions
+              The array of questions : [${chatBotDomain.filterQuestions
                 .map((questions) => questions.question)
-                .join(", ")}]
-
+                .join(", ")}
+        
 Once all questions are answered, **transition** the conversation smoothly by asking if they are interested in booking an appointment. Do not offer the link right away.
 
 If the customer agrees to book an appointment, lead them to this link: http://localhost:3000/portal/${id}/appointment/${
                 checkCustomer?.customer[0].id
-              } and tell them that this link is for the appointment.
-
-If the customer makes an inappropriate or off-topic remark, politely tell them that it is beyond the chatbot's scope and that a real user will take over. Add the keyword (realtime) at the end of that message.
-
-If the customer wishes to buy a product, redirect them to the payment page: http://localhost:3000/portal/${id}/payment/${
-                checkCustomer?.customer[0].id
               }.
 
+If the customer makes an inappropriate or off-topic remark or *ask to talk with agent* or does not agree to book an apointment then politely tell them that a real user will take over. **Must add a keyword (realtime) at the end! This is super important**.
           `,
             },
             ...chat,
@@ -253,10 +300,11 @@ If the customer wishes to buy a product, redirect them to the payment page: http
               content: message,
             },
           ],
-          model: "llama3-8b-8192",
+          model: "llama3-70b-8192",
         });
 
         console.log(chatCompletion.choices[0].message);
+        console.log(chat[chat.length - 1].content);
 
         if (chatCompletion.choices[0].message.content?.includes("(realtime)")) {
           const realtime = await client.chatRoom.update({
@@ -286,7 +334,9 @@ If the customer wishes to buy a product, redirect them to the payment page: http
             return { response };
           }
         }
+
         if (chat[chat.length - 1].content.includes("(complete)")) {
+          console.log(message);
           const firstUnansweredQuestion =
             await client.customerResponses.findFirst({
               where: {
@@ -300,6 +350,7 @@ If the customer wishes to buy a product, redirect them to the payment page: http
                 question: "asc",
               },
             });
+          // console.log(firstUnansweredQuestion.);
           if (firstUnansweredQuestion) {
             await client.customerResponses.update({
               where: {
@@ -320,7 +371,7 @@ If the customer wishes to buy a product, redirect them to the payment page: http
           console.log(generatedLink);
 
           if (generatedLink) {
-            const link = generatedLink[0];
+            const link = generatedLink[0].replace(".", "").replace("]", "");
 
             const response = {
               role: "assistant",
@@ -357,15 +408,15 @@ If the customer wishes to buy a product, redirect them to the payment page: http
           {
             role: "assistant",
             content: `
-      You are a highly knowledgeable and experienced sales representative for Leavoda, an all-in-one Field Service Management software. Leavoda helps businesses schedule jobs, dispatch teams, invoice clients, track performance, and get paid — all in one place. 
+      You (Alex) are a highly knowledgeable and experienced sales representative for Leavoda, an all-in-one Field Service Management software. Leavoda helps businesses schedule jobs, dispatch teams, invoice clients, track performance, and get paid — all in one place. 
 
       Start by warmly welcoming the customer on behalf of Leavoda, making them feel comfortable and must ask for their email so that the progress can be saved It is most important. Remember the email is not for follow up!
       
       Do not continue conversations until you ask and get the email. Remember it.
     
-      
-
       Be respectful and maintain a professional tone while never breaking character and do not forget to ask email.
+
+      If the customer makes an inappropriate or off-topic remark or *ask to talk with agent* or does not agree to book an apointment then politely tell them that a real user will take over. **Must add a keyword (realtime) at the end! This is super important**.
       `,
           },
           ...chat,
@@ -374,17 +425,32 @@ If the customer wishes to buy a product, redirect them to the payment page: http
             content: message,
           },
         ],
-        model: "llama3-8b-8192",
+        model: "llama3-70b-8192",
       });
 
       console.log(chatCompletion.choices[0].message);
       if (chatCompletion) {
-        const response = {
-          role: "assistant",
-          content: chatCompletion.choices[0].message.content,
-        };
+        const extractedEmail = extractEmailsFromString(
+          chatCompletion.choices[0].message.content as string
+        );
+        console.log(extractedEmail);
+        if (extractedEmail) {
+          customerEmail = extractedEmail[0];
+          console.log(customerEmail);
+          const response = {
+            role: "assistant",
+            content: `Welcome abroad! Thanks for providing your email! `,
+          };
 
-        return { response };
+          return { response };
+        } else {
+          const response = {
+            role: "assistant",
+            content: chatCompletion.choices[0].message.content,
+          };
+
+          return { response };
+        }
       }
     }
   } catch (error) {

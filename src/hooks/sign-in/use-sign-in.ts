@@ -32,7 +32,7 @@ export const useSignInForm = () => {
             title: "Success",
             description: "Welcome back!",
           });
-          router.push("/dashboard");
+          router.push("/conversation");
         }
       } catch (error: any) {
         setLoading(false);

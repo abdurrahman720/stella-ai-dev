@@ -1,7 +1,7 @@
 "use server";
 
 import { client } from "@/lib/prisma";
-// import { pusherServer } from "@/lib/utils";
+import { pusherServer } from "@/lib/utils";
 
 export const onToggleRealtime = async (id: string, state: boolean) => {
   try {
@@ -136,23 +136,27 @@ export const onViewUnReadMessages = async (id: string) => {
   }
 };
 
+export const onRealTimeChat = async (
+  chatroomId: string,
+  message: string,
+  id: string,
+  role: "assistant" | "user"
+) => {
+  try {
+    console.log(chatroomId, message, role);
+    const res = await pusherServer.trigger(chatroomId, "realtime-mode", {
+      chat: {
+        message,
+        id,
+        role,
+      },
+    });
 
-//TODO setup pusherr
-
-// export const onRealTimeChat = async (
-//   chatroomId: string,
-//   message: string,
-//   id: string,
-//   role: "assistant" | "user"
-// ) => {
-//   pusherServer.trigger(chatroomId, "realtime-mode", {
-//     chat: {
-//       message,
-//       id,
-//       role,
-//     },
-//   });
-// };
+    console.log(res);
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 export const onOwnerSendMessage = async (
   chatroom: string,

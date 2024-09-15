@@ -78,7 +78,7 @@ export const useSignUpForm = () => {
             });
 
             setLoading(false);
-            router.push("/dashboard");
+            router.push("/conversation");
           }
 
           if (registered?.status == 400) {

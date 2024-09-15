@@ -15,21 +15,21 @@ type SIDE_BAR_MENU_PROPS = {
 };
 
 export const SIDE_BAR_MENU: SIDE_BAR_MENU_PROPS[] = [
-  {
-    label: "Dashboard",
-    icon: <DashboardIcon />,
-    path: "dashboard",
-  },
+  // {
+  //   label: "Dashboard",
+  //   icon: <DashboardIcon />,
+  //   path: "dashboard",
+  // },
   {
     label: "Conversations",
     icon: <ChatIcon />,
     path: "conversation",
   },
-  {
-    label: "Integrations",
-    icon: <IntegrationsIcon />,
-    path: "integration",
-  },
+  // {
+  //   label: "Integrations",
+  //   icon: <IntegrationsIcon />,
+  //   path: "integration",
+  // },
   {
     label: "Settings",
     icon: <SettingsIcon />,

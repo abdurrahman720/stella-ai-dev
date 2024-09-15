@@ -1,5 +1,5 @@
 import { onAiChatBotAssistant, onGetCurrentChatBot } from "@/actions/bot";
-import { postToParent } from "@/lib/utils";
+import { postToParent, pusherClient } from "@/lib/utils";
 import {
   ChatBotMessageProps,
   ChatBotMessageSchema,
@@ -77,7 +77,8 @@ export const useChatBot = () => {
     );
   }, [botOpened]);
 
-  let limitRequest = 0;
+  let limitRequest = useRef<number>(0);
+
   const onGetDomainChatBot = async (id: string) => {
     setCurrentBotId(id);
     console.log(id);
@@ -95,17 +96,21 @@ export const useChatBot = () => {
     }
   };
 
+  //FIXME: frequently reseting the bot
+  console.log(limitRequest.current);
   useEffect(() => {
     window.addEventListener("message", (e) => {
       console.log(e.data);
       const botid = e.data;
       console.log(botid);
-      if (limitRequest < 1 && typeof botid == "string") {
+      if (limitRequest.current < 1 && typeof botid == "string") {
         onGetDomainChatBot(botid);
-        limitRequest++;
+        limitRequest.current = limitRequest.current + 1;
       }
     });
   }, []);
+
+  console.log(limitRequest.current);
 
   const onStartChatting = handleSubmit(async (values) => {
     console.log("ALL VALUES", values);
@@ -157,11 +162,12 @@ export const useChatBot = () => {
 
       setOnAiTyping(true);
 
+      //NOTE: when customer sent message
       const response = await onAiChatBotAssistant(
-        currentBotId!,
-        onChats,
-        "user",
-        values.content
+        currentBotId!, //This is actually the domain id
+        onChats, //previous chats
+        "user", //role of customer
+        values.content //message
       );
       console.log(response);
       if (response) {
@@ -209,24 +215,26 @@ export const useRealTime = (
 ) => {
   const counterRef = useRef(1);
 
-  // useEffect(() => {
-  //   pusherClient.subscribe(chatRoom);
-  //   pusherClient.bind("realtime-mode", (data: any) => {
-  //     console.log("✅", data);
-  //     if (counterRef.current !== 1) {
-  //       setChats((prev: any) => [
-  //         ...prev,
-  //         {
-  //           role: data.chat.role,
-  //           content: data.chat.message,
-  //         },
-  //       ]);
-  //     }
-  //     counterRef.current += 1;
-  //   });
-  //   return () => {
-  //     pusherClient.unbind("realtime-mode");
-  //     pusherClient.unsubscribe(chatRoom);
-  //   };
-  // }, []);
+  //BUG: data is not there
+  useEffect(() => {
+    pusherClient.subscribe(chatRoom);
+    console.log(chatRoom);
+    pusherClient.bind("realtime-mode", (data: any) => {
+      console.log(data);
+      if (counterRef.current !== 1) {
+        setChats((prev: any) => [
+          ...prev,
+          {
+            role: data.chat.role,
+            content: data.chat.message,
+          },
+        ]);
+      }
+      counterRef.current += 1;
+    });
+    return () => {
+      pusherClient.unbind("realtime-mode");
+      pusherClient.unsubscribe(chatRoom);
+    };
+  }, []);
 };
