@@ -12,7 +12,7 @@ function NavBar() {
           alt="LOGO"
           sizes="100vw"
           style={{
-            width: "100px",
+            width: "200px",
             height: "auto",
           }}
           width={0}

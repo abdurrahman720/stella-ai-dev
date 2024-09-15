@@ -38,13 +38,13 @@ export default async function Home() {
           <span className="text-orange bg-orange/20 px-4 py-2 rounded-full text-sm">
             An AI powered sales assistant chatbot
           </span>
-          <Image
+          {/* <Image
             src="/images/corinna-ai-logo.png"
             width={500}
             height={100}
             alt="Logo"
             className="max-w-lg object-contain"
-          />
+          /> */}
           <p className="text-center max-w-[500px]">
             Your AI powered sales assistant! Embed Corinna AI into any website
             with just a snippet of code!
@@ -54,10 +54,10 @@ export default async function Home() {
           </Button>
           <Image
             src="/images/iphonecorinna.png"
-            width={400}
-            height={100}
+            width={1000}
+            height={1000}
             alt="Logo"
-            className="max-w-lg object-contain"
+            className=" object-contain"
           />
         </div>
       </section>
