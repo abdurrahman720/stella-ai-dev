@@ -193,6 +193,11 @@ Just say, thanks for your email and go ahead. Nothig else.
           }
         }
         if (checkCustomer && checkCustomer.customer[0].chatRoom[0].live) {
+          console.log("sending email");
+          const user = await clerkClient.users.getUser(
+            checkCustomer.User?.clerkId!
+          );
+          onMailer(user.emailAddresses[0].emailAddress);
           await onStoreConversations(
             checkCustomer?.customer[0].chatRoom[0].id!,
             message,
@@ -291,7 +296,7 @@ If the customer agrees to book an appointment, lead them to this link: http://lo
                 checkCustomer?.customer[0].id
               }.
 
-If the customer makes an inappropriate or off-topic remark or *ask to talk with agent* or does not agree to book an apointment then politely tell them that a real user will take over. **Must add a keyword (realtime) at the end! This is super important**.
+If the customer makes an inappropriate or off-topic remark or *ask to talk with agent* or does not agree to book an apointment then politely tell them that a real user will take over. I need you to add a keyword '(realtime)' at the end! This is super important.
           `,
             },
             ...chat,
@@ -307,6 +312,7 @@ If the customer makes an inappropriate or off-topic remark or *ask to talk with 
         console.log(chat[chat.length - 1].content);
 
         if (chatCompletion.choices[0].message.content?.includes("(realtime)")) {
+          console.log("realtime");
           const realtime = await client.chatRoom.update({
             where: {
               id: checkCustomer?.customer[0].chatRoom[0].id,
@@ -416,7 +422,7 @@ If the customer makes an inappropriate or off-topic remark or *ask to talk with 
     
       Be respectful and maintain a professional tone while never breaking character and do not forget to ask email.
 
-      If the customer makes an inappropriate or off-topic remark or *ask to talk with agent* or does not agree to book an apointment then politely tell them that a real user will take over. **Must add a keyword (realtime) at the end! This is super important**.
+    If the customer makes an inappropriate or off-topic remark or *ask to talk with agent* or does not agree to book an apointment then politely tell them that a real user will take over. I need you to add a keyword '(realtime)' at the end! This is super important.
       `,
           },
           ...chat,
